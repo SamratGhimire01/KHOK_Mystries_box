@@ -1,0 +1,110 @@
+/* global.css — K HO K Design System */
+
+:root {
+    /* Colors */
+    --bg-primary:    #050505;
+    --bg-secondary:  #0D0D0D;
+    --bg-card:       rgba(255,255,255,0.04);
+    --accent:        #A855F7;
+    --accent-glow:   rgba(168,85,247,0.25);
+    --accent-dark:   #7C3AED;
+    --text-primary:  #FFFFFF;
+    --text-secondary:#A1A1AA;
+    --text-muted:    #52525B;
+    --border:        #262626;
+    --border-accent: rgba(168,85,247,0.3);
+    --success:       #10B981;
+    --error:         #EF4444;
+    --warning:       #F59E0B;
+
+    /* Typography */
+    --font-main:  'Segoe UI', system-ui, -apple-system, sans-serif;
+
+    /* Spacing */
+    --space-xs:  0.25rem;
+    --space-sm:  0.5rem;
+    --space-md:  1rem;
+    --space-lg:  2rem;
+    --space-xl:  4rem;
+
+    /* Radius */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 32px;
+
+    /* Transitions */
+    --transition: 0.2s ease;
+}
+
+body {
+    font-family:      var(--font-main);
+    background-color: var(--bg-primary);
+    color:            var(--text-primary);
+    line-height:      1.6;
+    min-height:       100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}
+
+/* Glass card */
+.glass-card {
+    background:    var(--bg-card);
+    border:        1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding:       var(--space-lg);
+    backdrop-filter: blur(10px);
+}
+
+/* Buttons */
+.btn-primary {
+    display:          inline-block;
+    background:       var(--accent);
+    color:            #fff;
+    padding:          0.75rem 2rem;
+    border-radius:    var(--radius-sm);
+    font-weight:      600;
+    letter-spacing:   0.05em;
+    cursor:           pointer;
+    transition:       background var(--transition), transform var(--transition);
+}
+.btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); }
+
+.btn-outline {
+    display:          inline-block;
+    border:           1px solid var(--accent);
+    color:            var(--accent);
+    padding:          0.75rem 2rem;
+    border-radius:    var(--radius-sm);
+    font-weight:      600;
+    cursor:           pointer;
+    transition:       all var(--transition);
+}
+.btn-outline:hover { background: var(--accent-glow); }
+
+/* Flash messages */
+.flash {
+    padding:       0.85rem 1.5rem;
+    margin:        1rem auto;
+    max-width:     600px;
+    border-radius: var(--radius-sm);
+    text-align:    center;
+    font-weight:   500;
+}
+.flash-success { background: rgba(16,185,129,0.15); border: 1px solid var(--success); color: var(--success); }
+.flash-error   { background: rgba(239,68,68,0.15);  border: 1px solid var(--error);   color: var(--error);   }
+.flash-info    { background: var(--accent-glow);    border: 1px solid var(--border-accent); color: var(--accent); }
+
+/* Section spacing */
+.section { padding: var(--space-xl) 0; }
+
+/* Responsive helpers */
+@media (max-width: 768px) {
+    .container { padding: 0 1rem; }
+    .hide-mobile { display: none; }
+}

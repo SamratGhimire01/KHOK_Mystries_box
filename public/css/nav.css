@@ -1,0 +1,60 @@
+/* nav.css — K HO K Navigation */
+
+.navbar {
+    display:          flex;
+    align-items:      center;
+    justify-content:  space-between;
+    padding:          1rem 2rem;
+    border-bottom:    1px solid var(--border);
+    background:       rgba(5,5,5,0.95);
+    position:         sticky;
+    top:              0;
+    z-index:          100;
+    backdrop-filter:  blur(12px);
+}
+
+.nav-logo {
+    font-size:      1.5rem;
+    font-weight:    800;
+    letter-spacing: 0.15em;
+    color:          var(--accent);
+}
+
+.nav-links {
+    display:     flex;
+    align-items: center;
+    gap:         2rem;
+}
+
+.nav-links a {
+    color:       var(--text-secondary);
+    font-size:   0.9rem;
+    letter-spacing: 0.05em;
+    transition:  color var(--transition);
+}
+.nav-links a:hover { color: var(--text-primary); }
+
+.nav-links .nav-btn {
+    background:    var(--accent);
+    color:         #fff;
+    padding:       0.5rem 1.25rem;
+    border-radius: var(--radius-sm);
+    font-weight:   600;
+}
+.nav-links .nav-btn:hover { background: var(--accent-dark); color: #fff; }
+
+.nav-links .nav-btn-outline {
+    border:        1px solid var(--border);
+    color:         var(--text-secondary);
+    padding:       0.5rem 1.25rem;
+    border-radius: var(--radius-sm);
+}
+.nav-links .nav-btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+
+.nav-links .nav-admin { color: var(--warning); }
+
+@media (max-width: 768px) {
+    .navbar { padding: 1rem; }
+    .nav-links { gap: 1rem; }
+    .nav-links a { font-size: 0.8rem; }
+}

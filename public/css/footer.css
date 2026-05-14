@@ -1,0 +1,11 @@
+/* footer.css — K HO K Footer */
+
+.footer {
+    border-top:  1px solid var(--border);
+    padding:     3rem 2rem;
+    text-align:  center;
+    margin-top:  auto;
+}
+.footer-brand   { font-size: 1.25rem; font-weight: 800; color: var(--accent); letter-spacing: 0.15em; }
+.footer-tagline { color: var(--text-muted); font-size: 0.85rem; margin: 0.25rem 0 0.75rem; }
+.footer-copy    { color: var(--text-muted); font-size: 0.8rem; }
