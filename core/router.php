@@ -1,14 +1,10 @@
 <?php
-// ─────────────────────────────────────────
-//  K HO K — Router / Front Controller
-//  core/router.php
-// ─────────────────────────────────────────
-
-function route(string $path): void {
-    $base    = dirname($_SERVER['SCRIPT_NAME']);
-    $request = str_replace($base, '', $_SERVER['REQUEST_URI']);
-    $request = strtok($request, '?'); // strip query string
-    $request = rtrim($request, '/') ?: '/';
+function route(): void {
+    $uri = $_SERVER['REQUEST_URI'];
+    $uri = strtok($uri, '?');
+    $uri = str_replace('/khok', '', $uri);
+    $uri = '/' . trim($uri, '/');
+    if ($uri === '') $uri = '/';
 
     $routes = [
         '/'               => __DIR__ . '/../pages/home.php',
@@ -26,8 +22,8 @@ function route(string $path): void {
         '/admin/delivery' => __DIR__ . '/../admin/pages/delivery.php',
     ];
 
-    if (array_key_exists($request, $routes) && file_exists($routes[$request])) {
-        require $routes[$request];
+    if (array_key_exists($uri, $routes) && file_exists($routes[$uri])) {
+        require $routes[$uri];
     } else {
         http_response_code(404);
         require __DIR__ . '/../pages/404.php';
