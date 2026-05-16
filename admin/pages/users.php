@@ -1,5 +1,5 @@
 <?php
-// admin/pages/users.php — K HO K Admin Users
+// admin/pages/users.php — K HO K Admin Users v2
 require_once __DIR__ . '/../../config/app.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/session.php';
@@ -11,20 +11,19 @@ requireAdmin();
 $pageTitle = 'Admin — Users';
 $db = getDB();
 
-// Handle role change
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_role'])) {
-    $userId  = (int)$_POST['user_id'];
-    $newRole = sanitize($_POST['role']);
-    if (in_array($newRole, ['customer','admin','delivery']) && $userId !== (int)$_SESSION['user_id']) {
-        $db->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$newRole, $userId]);
-        setFlash('success', 'User role updated.');
+// Handle delete
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
+    $userId = (int)$_POST['user_id'];
+    if ($userId !== (int)$_SESSION['user_id']) {
+        $db->prepare('DELETE FROM users WHERE id = ?')->execute([$userId]);
+        setFlash('success', 'User account deleted.');
     }
     header('Location: ' . APP_URL . '/admin/users');
     exit;
 }
 
 $search = sanitize($_GET['search'] ?? '');
-$where  = $search ? 'WHERE full_name LIKE ? OR email LIKE ? OR phone LIKE ?' : '';
+$where  = $search ? 'WHERE u.full_name LIKE ? OR u.email LIKE ? OR u.phone LIKE ?' : '';
 $params = $search ? ["%$search%", "%$search%", "%$search%"] : [];
 
 $users = $db->prepare("
@@ -53,7 +52,6 @@ require_once __DIR__ . '/../../components/admin_header.php';
         </div>
     </div>
 
-    <!-- Search -->
     <div class="admin-filters glass-card">
         <form method="GET" action="<?= APP_URL ?>/admin/users" class="filters-form">
             <input class="form-input" type="text" name="search"
@@ -64,7 +62,6 @@ require_once __DIR__ . '/../../components/admin_header.php';
         </form>
     </div>
 
-    <!-- Users table -->
     <div class="admin-table-card glass-card">
         <div class="table-wrap">
             <table class="admin-table">
@@ -75,10 +72,10 @@ require_once __DIR__ . '/../../components/admin_header.php';
                         <th>Phone</th>
                         <th>City</th>
                         <th>Orders</th>
-                        <th>Spent</th>
+                        <th>Total Spent</th>
                         <th>Role</th>
                         <th>Joined</th>
-                        <th>Update Role</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -94,24 +91,26 @@ require_once __DIR__ . '/../../components/admin_header.php';
                     <td><?= $u['order_count'] ?></td>
                     <td><?= formatPrice($u['total_spent']) ?></td>
                     <td>
-                        <span class="status-badge <?= $u['role'] === 'admin' ? 'status-badge--packed' : ($u['role'] === 'delivery' ? 'status-badge--confirmed' : 'status-badge--shipped') ?>">
+                        <span class="status-badge <?= $u['role']==='admin' ? 'status-badge--packed' : ($u['role']==='delivery' ? 'status-badge--confirmed' : 'status-badge--shipped') ?>">
                             <?= ucfirst($u['role']) ?>
                         </span>
                     </td>
                     <td><?= date('d M Y', strtotime($u['created_at'])) ?></td>
-                    <td>
+                    <td class="actions-cell">
+                        <a href="<?= APP_URL ?>/admin/users/profile?id=<?= $u['id'] ?>"
+                           class="tbl-action">View Profile</a>
                         <?php if ($u['id'] !== (int)$_SESSION['user_id']): ?>
-                        <form method="POST" action="<?= APP_URL ?>/admin/users" class="inline-form">
+                        &nbsp;
+                        <form method="POST" style="display:inline"
+                              onsubmit="return confirm('Delete <?= e($u['full_name']) ?>\'s account permanently?')">
                             <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
-                            <select class="form-input form-select inline-select" name="role">
-                                <?php foreach (['customer','admin','delivery'] as $r): ?>
-                                <option <?= $u['role'] === $r ? 'selected' : '' ?>><?= $r ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                            <button type="submit" name="update_role" class="tbl-action-btn">Set</button>
+                            <button type="submit" name="delete_user"
+                                    style="color:var(--error);background:none;border:none;cursor:pointer;font-size:.78rem;font-weight:600">
+                                Delete
+                            </button>
                         </form>
                         <?php else: ?>
-                        <span style="color:var(--text-muted);font-size:.75rem">You</span>
+                        <span style="color:var(--text-muted);font-size:.72rem">(you)</span>
                         <?php endif; ?>
                     </td>
                 </tr>

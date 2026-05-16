@@ -12,30 +12,37 @@ function isActive(string $path, string $current): string {
     </div>
 
     <nav class="sidebar-nav">
-        <p class="sidebar-nav-label">Main</p>
-        <a href="<?= APP_URL ?>/admin" class="sidebar-link <?= isActive('/admin', $currentPath) && !str_contains($currentPath, '/admin/') ? 'active' : '' ?>">
+        <p class="sidebar-nav-label">Overview</p>
+        <a href="<?= APP_URL ?>/admin"
+           class="sidebar-link <?= (rtrim($currentPath,'/') === '/khok/admin') ? 'active' : '' ?>">
             <span class="sidebar-icon">📊</span> Dashboard
         </a>
 
-        <p class="sidebar-nav-label">Management</p>
-        <a href="<?= APP_URL ?>/admin/orders" class="sidebar-link <?= isActive('/admin/orders', $currentPath) ?>">
+        <p class="sidebar-nav-label">Manage</p>
+        <a href="<?= APP_URL ?>/admin/orders"
+           class="sidebar-link <?= isActive('/admin/orders', $currentPath) ?>">
             <span class="sidebar-icon">📦</span> Orders
         </a>
-        <a href="<?= APP_URL ?>/admin/products" class="sidebar-link <?= isActive('/admin/products', $currentPath) ?>">
+        <a href="<?= APP_URL ?>/admin/products"
+           class="sidebar-link <?= isActive('/admin/products', $currentPath) ?>">
             <span class="sidebar-icon">🎁</span> Products
         </a>
-        <a href="<?= APP_URL ?>/admin/users" class="sidebar-link <?= isActive('/admin/users', $currentPath) ?>">
+        <a href="<?= APP_URL ?>/admin/users"
+           class="sidebar-link <?= isActive('/admin/users', $currentPath) ?>">
             <span class="sidebar-icon">👥</span> Users
         </a>
-        <a href="<?= APP_URL ?>/admin/delivery" class="sidebar-link <?= isActive('/admin/delivery', $currentPath) ?>">
+        <a href="<?= APP_URL ?>/admin/delivery"
+           class="sidebar-link <?= isActive('/admin/delivery', $currentPath) ?>">
             <span class="sidebar-icon">🚚</span> Delivery
         </a>
 
         <p class="sidebar-nav-label">Account</p>
-        <a href="<?= APP_URL ?>/" class="sidebar-link">
-            <span class="sidebar-icon">🌐</span> View Site
+        <a href="<?= APP_URL ?>/profile"
+           class="sidebar-link">
+            <span class="sidebar-icon">👤</span> My Profile
         </a>
-        <a href="<?= APP_URL ?>/logout" class="sidebar-link sidebar-link--danger">
+        <a href="<?= APP_URL ?>/logout"
+           class="sidebar-link sidebar-link--danger">
             <span class="sidebar-icon">🚪</span> Logout
         </a>
     </nav>
