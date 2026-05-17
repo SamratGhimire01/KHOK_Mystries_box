@@ -1,5 +1,5 @@
 <?php
-// admin/pages/products.php — K HO K Admin Products v2
+// admin/pages/products.php — v3 with buying price + accounting integration
 require_once __DIR__ . '/../../config/app.php';
 require_once __DIR__ . '/../../config/db.php';
 require_once __DIR__ . '/../../config/session.php';
@@ -11,14 +11,28 @@ requireAdmin();
 $pageTitle = 'Admin — Products';
 $db = getDB();
 
-// Handle stock update for existing product
+// Handle stock update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_stock'])) {
-    $productId = (int)$_POST['product_id'];
-    $stock     = (int)$_POST['stock'];
-    $rarity    = sanitize($_POST['rarity'] ?? '');
-    $db->prepare('UPDATE products SET stock=?, rarity=? WHERE id=?')
-       ->execute([$stock, $rarity, $productId]);
-    setFlash('success', 'Product updated.');
+    $productId   = (int)$_POST['product_id'];
+    $addStock    = (int)$_POST['add_stock'];      // units being added
+    $buyingPrice = (float)$_POST['buying_price']; // price admin paid per unit
+    $rarity      = sanitize($_POST['rarity'] ?? '');
+
+    if ($addStock > 0) {
+        $db->prepare('
+            UPDATE products
+            SET stock = stock + ?,
+                buying_price = ?,
+                rarity = ?
+            WHERE id = ?
+        ')->execute([$addStock, $buyingPrice, $rarity, $productId]);
+
+        // Calculate investment added
+        $investment = $addStock * $buyingPrice;
+        setFlash('success', "Added $addStock units. Investment added: " . formatPrice($investment));
+    } else {
+        setFlash('error', 'Units to add must be greater than 0.');
+    }
     header('Location: ' . APP_URL . '/admin/products');
     exit;
 }
@@ -33,26 +47,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_active'])) {
 
 // Handle add new product
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_product'])) {
-    $name     = sanitize($_POST['name']     ?? '');
-    $brand    = sanitize($_POST['brand']    ?? '');
-    $category = sanitize($_POST['category'] ?? '');
-    $price    = (float)($_POST['price']     ?? 0);
-    $rarity   = sanitize($_POST['rarity']   ?? 'common');
-    $weight   = (float)($_POST['weight']    ?? 5);
-    $stock    = (int)($_POST['stock']       ?? 0);
-    $boxIds   = $_POST['box_ids'] ?? [];
+    $name        = sanitize($_POST['name']        ?? '');
+    $brand       = sanitize($_POST['brand']       ?? '');
+    $category    = sanitize($_POST['category']    ?? '');
+    $price       = (float)($_POST['price']        ?? 0);
+    $buyingPrice = (float)($_POST['buying_price'] ?? 0);
+    $rarity      = sanitize($_POST['rarity']      ?? 'common');
+    $weight      = (float)($_POST['weight']       ?? 5);
+    $stock       = (int)($_POST['stock']          ?? 0);
+    $boxIds      = $_POST['box_ids'] ?? [];
 
     if ($name && $price > 0) {
-        $db->prepare('INSERT INTO products (name,brand,category,price,rarity,weight,stock) VALUES (?,?,?,?,?,?,?)')
-           ->execute([$name,$brand,$category,$price,$rarity,$weight,$stock]);
+        $db->prepare('
+            INSERT INTO products (name,brand,category,price,buying_price,rarity,weight,stock)
+            VALUES (?,?,?,?,?,?,?,?)
+        ')->execute([$name,$brand,$category,$price,$buyingPrice,$rarity,$weight,$stock]);
         $newId = $db->lastInsertId();
 
-        // Assign to selected boxes
         foreach ($boxIds as $boxId) {
             $db->prepare('INSERT IGNORE INTO box_product_pool (box_id,product_id) VALUES (?,?)')
                ->execute([(int)$boxId, $newId]);
         }
-        setFlash('success', "Product '$name' added.");
+        $investment = $stock * $buyingPrice;
+        setFlash('success', "Product '$name' added. Initial investment: " . formatPrice($investment));
     } else {
         setFlash('error', 'Name and price are required.');
     }
@@ -60,17 +77,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_product'])) {
     exit;
 }
 
-// Get all products sorted: low stock first, then by rarity weight
 $products = $db->query('
-    SELECT p.*, GROUP_CONCAT(bpp.box_id) AS box_ids
+    SELECT p.*,
+           COUNT(oi.id) AS units_sold
     FROM products p
-    LEFT JOIN box_product_pool bpp ON bpp.product_id = p.id
+    LEFT JOIN order_items oi ON oi.product_id = p.id
     GROUP BY p.id
     ORDER BY p.stock ASC, p.weight DESC
 ')->fetchAll();
 
 $boxes    = $db->query('SELECT * FROM boxes ORDER BY price ASC')->fetchAll();
 $lowCount = $db->query('SELECT COUNT(*) FROM products WHERE stock <= 3 AND is_active=1')->fetchColumn();
+
+// Quick accounting summary for top
+$totalInvestment = $db->query('SELECT COALESCE(SUM(buying_price * stock),0) FROM products WHERE is_active=1')->fetchColumn();
+$totalRevenue    = $db->query('SELECT COALESCE(SUM(total_amount),0) FROM orders WHERE payment_status="paid"')->fetchColumn();
 
 require_once __DIR__ . '/../../components/admin_header.php';
 ?>
@@ -84,22 +105,27 @@ require_once __DIR__ . '/../../components/admin_header.php';
             <p class="admin-page-sub">
                 <?= count($products) ?> products
                 <?php if ($lowCount > 0): ?>
-                &nbsp;·&nbsp;
-                <span style="color:var(--error)">⚠️ <?= $lowCount ?> low stock</span>
+                &nbsp;·&nbsp;<span style="color:var(--error)">⚠️ <?= $lowCount ?> low stock</span>
                 <?php endif; ?>
+                &nbsp;·&nbsp;
+                <span style="color:var(--text-muted)">
+                    Stock investment: <strong style="color:var(--accent)"><?= formatPrice($totalInvestment) ?></strong>
+                </span>
             </p>
         </div>
-        <button class="btn-primary" onclick="toggleSection('addNewForm')">+ Add New Product</button>
+        <div style="display:flex;gap:.65rem">
+            <a href="<?= APP_URL ?>/admin/accounting" class="btn-outline">📊 View Accounting</a>
+            <button class="btn-primary" onclick="toggleSection('addNewForm')">+ Add New Product</button>
+        </div>
     </div>
 
     <!-- ── UPDATE EXISTING PRODUCT ── -->
     <div class="glass-card admin-form-card">
-        <h3 class="chart-title">Update Existing Product Stock &amp; Rarity</h3>
-        <p style="color:var(--text-muted);font-size:.82rem;margin-bottom:1.25rem">
-            Select a product to auto-fill its details, then update stock or rarity.
+        <h3 class="chart-title">Update Product Stock</h3>
+        <p style="color:var(--text-muted);font-size:.8rem;margin-bottom:1.1rem">
+            Select product → enter units to add + buying price → investment auto-calculates.
         </p>
 
-        <!-- Product selector -->
         <div class="form-group" style="margin-bottom:1rem">
             <label class="form-label">Select Product</label>
             <select class="form-input form-select" id="productSelector" onchange="fillProduct(this)">
@@ -108,38 +134,44 @@ require_once __DIR__ . '/../../components/admin_header.php';
                 <option value="<?= $p['id'] ?>"
                         data-name="<?= e($p['name']) ?>"
                         data-brand="<?= e($p['brand']) ?>"
-                        data-category="<?= e($p['category']) ?>"
                         data-price="<?= $p['price'] ?>"
+                        data-buying="<?= $p['buying_price'] ?>"
                         data-rarity="<?= e($p['rarity']) ?>"
-                        data-weight="<?= $p['weight'] ?>"
                         data-stock="<?= $p['stock'] ?>"
+                        data-sold="<?= $p['units_sold'] ?>"
                         data-active="<?= $p['is_active'] ?>"
-                        <?= $p['stock'] <= 3 ? 'class="low-stock-option"' : '' ?>>
-                    <?= e($p['name']) ?>
-                    (Stock: <?= $p['stock'] ?>)
-                    <?= $p['stock'] <= 3 ? '⚠️' : '' ?>
+                        <?= $p['stock'] <= 3 ? 'class="low-stock-option"':'' ?>>
+                    <?= e($p['name']) ?> (Stock: <?= $p['stock'] ?><?= $p['stock']<=3?' ⚠️':'' ?>)
                 </option>
                 <?php endforeach; ?>
             </select>
         </div>
 
-        <!-- Auto-filled info (read only) -->
         <div id="productInfo" style="display:none">
+            <!-- Read-only info -->
             <div class="product-info-grid">
                 <div class="pi-item"><span class="pi-label">Name</span><span class="pi-value" id="piName">—</span></div>
                 <div class="pi-item"><span class="pi-label">Brand</span><span class="pi-value" id="piBrand">—</span></div>
-                <div class="pi-item"><span class="pi-label">Category</span><span class="pi-value" id="piCategory">—</span></div>
-                <div class="pi-item"><span class="pi-label">Unit Price</span><span class="pi-value" id="piPrice">—</span></div>
-                <div class="pi-item"><span class="pi-label">Weight</span><span class="pi-value" id="piWeight">—</span></div>
+                <div class="pi-item"><span class="pi-label">Selling Price</span><span class="pi-value" id="piPrice">—</span></div>
+                <div class="pi-item"><span class="pi-label">Current Stock</span><span class="pi-value" id="piStock">—</span></div>
+                <div class="pi-item"><span class="pi-label">Units Sold</span><span class="pi-value" id="piSold">—</span></div>
                 <div class="pi-item"><span class="pi-label">Status</span><span class="pi-value" id="piActive">—</span></div>
             </div>
 
             <form method="POST" action="<?= APP_URL ?>/admin/products" class="update-stock-form">
                 <input type="hidden" name="product_id" id="updateProductId">
-                <div class="update-row">
+                <div class="update-row-v2">
                     <div class="form-group">
-                        <label class="form-label">Stock</label>
-                        <input class="form-input" type="number" name="stock" id="updateStock" min="0" required>
+                        <label class="form-label">Units to Add *</label>
+                        <input class="form-input" type="number" name="add_stock"
+                               id="updateAddStock" min="1" placeholder="e.g. 3"
+                               oninput="calcInvestment()">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Your Buying Price (Rs.) *</label>
+                        <input class="form-input" type="number" name="buying_price"
+                               id="updateBuyingPrice" min="0" step="0.01" placeholder="e.g. 14000"
+                               oninput="calcInvestment()">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Rarity</label>
@@ -150,20 +182,25 @@ require_once __DIR__ . '/../../components/admin_header.php';
                             <option value="legendary">Legendary</option>
                         </select>
                     </div>
-                    <div class="form-group update-btn-group">
-                        <label class="form-label">&nbsp;</label>
-                        <button type="submit" name="update_stock" class="btn-primary update-save-btn">
-                            💾 Save Changes
-                        </button>
+                    <div class="form-group">
+                        <label class="form-label">Investment Preview</label>
+                        <div class="investment-preview" id="investmentPreview">
+                            Enter units &amp; buying price
+                        </div>
                     </div>
                 </div>
-            </form>
 
-            <form method="POST" action="<?= APP_URL ?>/admin/products" style="margin-top:.75rem">
-                <input type="hidden" name="product_id" id="toggleProductId">
-                <button type="submit" name="toggle_active" class="btn-outline btn-sm" id="toggleActiveBtn">
-                    Toggle Active/Hidden
-                </button>
+                <div style="display:flex;gap:.75rem;align-items:center;margin-top:1rem">
+                    <button type="submit" name="update_stock" class="btn-primary update-save-btn">
+                        💾 Add Stock &amp; Save
+                    </button>
+                    <form method="POST" action="<?= APP_URL ?>/admin/products" style="margin:0">
+                        <input type="hidden" name="product_id" id="toggleProductId">
+                        <button type="submit" name="toggle_active" class="btn-outline btn-sm" id="toggleActiveBtn">
+                            Toggle Active/Hidden
+                        </button>
+                    </form>
+                </div>
             </form>
         </div>
     </div>
@@ -186,8 +223,12 @@ require_once __DIR__ . '/../../components/admin_header.php';
                     <input class="form-input" type="text" name="category" placeholder="e.g. Audio">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Price (Rs.) *</label>
+                    <label class="form-label">Selling Price (Rs.) *</label>
                     <input class="form-input" type="number" name="price" placeholder="18000" required min="1">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Your Buying Price (Rs.)</label>
+                    <input class="form-input" type="number" name="buying_price" placeholder="14000" min="0" step="0.01">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Rarity</label>
@@ -218,55 +259,65 @@ require_once __DIR__ . '/../../components/admin_header.php';
                     <?php endforeach; ?>
                 </div>
             </div>
-            <button type="submit" name="add_product" class="btn-primary">Add Product</button>
-            <button type="button" class="btn-outline" onclick="toggleSection('addNewForm')" style="margin-left:.75rem">Cancel</button>
+            <div style="display:flex;gap:.75rem">
+                <button type="submit" name="add_product" class="btn-primary">Add Product</button>
+                <button type="button" class="btn-outline" onclick="toggleSection('addNewForm')">Cancel</button>
+            </div>
         </form>
     </div>
 
     <!-- ── PRODUCTS TABLE ── -->
     <div class="admin-table-card glass-card">
-        <h3 class="chart-title" style="margin-bottom:1rem">
+        <h3 class="chart-title">
             All Products
-            <span style="color:var(--text-muted);font-size:.78rem;font-weight:400;margin-left:.5rem">
-                — Low stock shown first
+            <span style="color:var(--text-muted);font-size:.76rem;font-weight:400;margin-left:.5rem">
+                — Low stock first · Click product name for quick edit
             </span>
         </h3>
         <div class="table-wrap">
             <table class="admin-table">
                 <thead>
                     <tr>
-                        <th>Name</th>
+                        <th>Product</th>
                         <th>Brand</th>
-                        <th>Price</th>
+                        <th>Buying Price</th>
+                        <th>Selling Price</th>
+                        <th>Profit/Unit</th>
                         <th>Rarity</th>
-                        <th>Weight</th>
                         <th>Stock</th>
+                        <th>Sold</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                <?php foreach ($products as $p): ?>
-                <tr class="<?= !$p['is_active'] ? 'row-inactive' : '' ?> <?= $p['stock'] <= 3 ? 'row-lowstock' : '' ?>">
+                <?php foreach ($products as $p):
+                    $profit = $p['price'] - $p['buying_price'];
+                ?>
+                <tr class="<?= !$p['is_active'] ? 'row-inactive':'' ?> <?= $p['stock']<=3 ? 'row-lowstock':'' ?>"
+                    style="cursor:pointer"
+                    onclick="document.getElementById('productSelector').value='<?= $p['id'] ?>';fillProductById(<?= $p['id'] ?>)">
                     <td>
                         <strong><?= e($p['name']) ?></strong>
-                        <?php if ($p['stock'] == 0): ?>
-                        <span class="out-of-stock-badge">OUT</span>
-                        <?php elseif ($p['stock'] <= 3): ?>
-                        <span class="low-stock-badge">LOW</span>
+                        <?php if ($p['stock']==0): ?><span class="out-of-stock-badge">OUT</span>
+                        <?php elseif ($p['stock']<=3): ?><span class="low-stock-badge">LOW</span>
                         <?php endif; ?>
                     </td>
                     <td><?= e($p['brand']) ?></td>
-                    <td><?= formatPrice($p['price']) ?></td>
-                    <td><span class="rarity-pill rarity-pill--<?= e($p['rarity']) ?>"><?= ucfirst(str_replace('_',' ',$p['rarity'])) ?></span></td>
-                    <td><?= $p['weight'] ?></td>
-                    <td>
-                        <span style="color:<?= $p['stock'] == 0 ? 'var(--error)' : ($p['stock'] <= 3 ? 'var(--warning)' : 'var(--success)') ?>;font-weight:600">
-                            <?= $p['stock'] ?>
-                        </span>
+                    <td style="color:var(--error)">
+                        <?= $p['buying_price'] > 0 ? formatPrice($p['buying_price']) : '<span style="color:var(--warning);font-size:.75rem">Not set</span>' ?>
                     </td>
+                    <td style="color:var(--success)"><?= formatPrice($p['price']) ?></td>
+                    <td style="color:<?= $profit>=0?'var(--success)':'var(--error)' ?>;font-weight:600">
+                        <?= formatPrice($profit) ?>
+                    </td>
+                    <td><span class="rarity-pill rarity-pill--<?= e($p['rarity']) ?>"><?= ucfirst(str_replace('_',' ',$p['rarity'])) ?></span></td>
+                    <td style="color:<?= $p['stock']==0?'var(--error)':($p['stock']<=3?'var(--warning)':'var(--success)') ?>;font-weight:600">
+                        <?= $p['stock'] ?>
+                    </td>
+                    <td><?= $p['units_sold'] ?></td>
                     <td>
-                        <span class="status-badge <?= $p['is_active'] ? 'status-badge--delivered' : 'status-badge--cancelled' ?>">
-                            <?= $p['is_active'] ? 'Active' : 'Hidden' ?>
+                        <span class="status-badge <?= $p['is_active']?'status-badge--delivered':'status-badge--cancelled' ?>">
+                            <?= $p['is_active']?'Active':'Hidden' ?>
                         </span>
                     </td>
                 </tr>
@@ -280,26 +331,58 @@ require_once __DIR__ . '/../../components/admin_header.php';
 </div>
 
 <script>
+// Store all product data for quick lookup
+const PRODUCTS = <?= json_encode(array_column($products, null, 'id')) ?>;
+
+function fillProductById(id) {
+    const sel = document.getElementById('productSelector');
+    sel.value = id;
+    fillProduct(sel);
+    // Scroll to update form
+    document.querySelector('.admin-form-card').scrollIntoView({behavior:'smooth'});
+}
+
 function fillProduct(sel) {
-    const opt = sel.options[sel.selectedIndex];
+    const id   = sel.value;
     const info = document.getElementById('productInfo');
-    if (!opt.value) { info.style.display='none'; return; }
+    if (!id) { info.style.display='none'; return; }
 
-    document.getElementById('piName').textContent     = opt.dataset.name;
-    document.getElementById('piBrand').textContent    = opt.dataset.brand;
-    document.getElementById('piCategory').textContent = opt.dataset.category;
-    document.getElementById('piPrice').textContent    = 'Rs. ' + Number(opt.dataset.price).toLocaleString();
-    document.getElementById('piWeight').textContent   = opt.dataset.weight;
-    document.getElementById('piActive').textContent   = opt.dataset.active === '1' ? '✅ Active' : '🔴 Hidden';
+    const p = PRODUCTS[id];
+    if (!p) return;
 
-    document.getElementById('updateProductId').value  = opt.value;
-    document.getElementById('updateStock').value      = opt.dataset.stock;
-    document.getElementById('updateRarity').value     = opt.dataset.rarity;
-    document.getElementById('toggleProductId').value  = opt.value;
+    document.getElementById('piName').textContent    = p.name;
+    document.getElementById('piBrand').textContent   = p.brand;
+    document.getElementById('piPrice').textContent   = 'Rs. ' + Number(p.price).toLocaleString();
+    document.getElementById('piStock').textContent   = p.stock;
+    document.getElementById('piSold').textContent    = p.units_sold;
+    document.getElementById('piActive').textContent  = p.is_active == 1 ? '✅ Active' : '🔴 Hidden';
+
+    document.getElementById('updateProductId').value  = p.id;
+    document.getElementById('updateBuyingPrice').value = p.buying_price > 0 ? p.buying_price : '';
+    document.getElementById('updateRarity').value     = p.rarity;
+    document.getElementById('toggleProductId').value  = p.id;
     document.getElementById('toggleActiveBtn').textContent =
-        opt.dataset.active === '1' ? '🔴 Set Hidden' : '✅ Set Active';
+        p.is_active == 1 ? '🔴 Set Hidden' : '✅ Set Active';
+
+    document.getElementById('updateAddStock').value = '';
+    document.getElementById('investmentPreview').textContent = 'Enter units & buying price';
 
     info.style.display = 'block';
+}
+
+function calcInvestment() {
+    const units  = parseFloat(document.getElementById('updateAddStock').value)  || 0;
+    const price  = parseFloat(document.getElementById('updateBuyingPrice').value) || 0;
+    const total  = units * price;
+    const prev   = document.getElementById('investmentPreview');
+
+    if (units > 0 && price > 0) {
+        prev.textContent = `Rs. ${total.toLocaleString()} investment (${units} × Rs. ${price.toLocaleString()})`;
+        prev.style.color = 'var(--accent)';
+    } else {
+        prev.textContent = 'Enter units & buying price';
+        prev.style.color = '';
+    }
 }
 
 function toggleSection(id) {
@@ -307,4 +390,5 @@ function toggleSection(id) {
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 </script>
+
 <?php require_once __DIR__ . '/../../components/admin_footer.php'; ?>
