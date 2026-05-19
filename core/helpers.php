@@ -4,8 +4,8 @@
 //  core/helpers.php
 // ─────────────────────────────────────────
 
-function e(string $str): string {
-    return htmlspecialchars($str, ENT_QUOTES, 'UTF-8');
+function e(?string $str): string {
+    return htmlspecialchars($str ?? '', ENT_QUOTES, 'UTF-8');
 }
 
 function formatPrice(int|float $amount): string {

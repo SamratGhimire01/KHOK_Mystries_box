@@ -3,7 +3,6 @@
 //  K HO K — App Configuration
 //  config/app.php
 // ─────────────────────────────────────────
-
 define('APP_NAME',    'K HO K');
 define('APP_URL',     'http://localhost/khok');
 define('APP_VERSION', '1.0.0');
