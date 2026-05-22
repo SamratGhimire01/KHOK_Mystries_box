@@ -69,7 +69,7 @@ $db->prepare('UPDATE orders SET notes = CONCAT(COALESCE(notes,""), ?) WHERE orde
         <input type="hidden" name="product_code"      value="<?= $productCode ?>">
         <input type="hidden" name="product_service_charge"  value="0">
         <input type="hidden" name="product_delivery_charge" value="0">
-        <input type="hidden" name="success_url"       value="<?= PAYMENT_SUCCESS_URL ?>?method=esewa&ref=<?= urlencode($orderRef) ?>">
+        <input type="hidden" name="success_url" value="http://localhost/khok/esewa_return.php?ref=<?= urlencode($orderRef) ?>">
         <input type="hidden" name="failure_url"       value="<?= PAYMENT_FAILURE_URL ?>?method=esewa&ref=<?= urlencode($orderRef) ?>">
         <input type="hidden" name="signed_field_names" value="total_amount,transaction_uuid,product_code">
         <input type="hidden" name="signature"         value="<?= $signature ?>">

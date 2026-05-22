@@ -24,6 +24,7 @@ function route(): void {
         // Payment APIs
         '/api/payment/esewa'      => __DIR__ . '/../api/payment/esewa_init.php',
         '/api/payment/esewa/verify' => __DIR__ . '/../api/payment/esewa_verify.php',
+        '/api/payment/esewa/verify/' => __DIR__ . '/../api/payment/esewa_verify.php',
         '/api/payment/fonepay'    => __DIR__ . '/../api/payment/fonepay_init.php',
         '/api/payment/fonepay/verify' => __DIR__ . '/../api/payment/fonepay_verify.php',
 
