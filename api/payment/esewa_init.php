@@ -81,3 +81,4 @@ $db->prepare('UPDATE orders SET notes = CONCAT(COALESCE(notes,""), ?) WHERE orde
     </script>
 </body>
 </html>
+<!-- This is a simple eSewa payment initialization page -->
