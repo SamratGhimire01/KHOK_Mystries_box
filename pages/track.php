@@ -1,8 +1,9 @@
 <?php
-// pages/track.php — K HO K Order Tracking
+// pages/track.php — K HO K Order Tracking v2
 require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../config/session.php';
+require_once __DIR__ . '/../config/payment.php';
 require_once __DIR__ . '/../core/helpers.php';
 
 startSession();
@@ -11,7 +12,6 @@ $pageTitle = 'Track Order';
 $pageCSS   = 'track.css';
 $pageJS    = 'track.js';
 
-// If order ref passed in URL, auto-search
 $orderRef = sanitize($_GET['ref'] ?? '');
 
 require_once __DIR__ . '/../components/header.php';
@@ -21,7 +21,7 @@ require_once __DIR__ . '/../components/header.php';
     <div class="track-orb"></div>
     <div class="container">
 
-        <!-- Search bar -->
+        <!-- Search -->
         <div class="track-header">
             <p class="section-eyebrow">Live Tracking</p>
             <h1 class="track-title">Track Your Order</h1>
@@ -35,40 +35,59 @@ require_once __DIR__ . '/../components/header.php';
             </form>
         </div>
 
-        <!-- Results panel (hidden until searched) -->
-        <div class="track-result" id="trackResult" style="display:none">
+        <!-- Loading -->
+        <div class="track-loading" id="trackLoading" style="display:none">
+            <div class="track-spinner"></div>
+            <p>Searching for your order...</p>
+        </div>
 
-            <!-- Order info -->
-            <div class="track-order-card glass-card" id="trackOrderCard"></div>
+        <!-- Empty -->
+        <div class="track-empty" id="trackEmpty" style="display:none">
+            <div class="track-empty-icon">🔍</div>
+            <p>No order found with that reference.<br>Please check and try again.</p>
+        </div>
+
+        <!-- Result -->
+        <div id="trackResult" style="display:none">
+
+            <!-- Order info card -->
+            <div class="track-order-info glass-card" id="trackOrderCard"></div>
 
             <!-- Stepper -->
-            <div class="track-stepper glass-card">
+            <div class="track-stepper-card glass-card">
+                <h3 class="track-card-title">Delivery Progress</h3>
                 <div class="stepper">
 
                     <div class="stepper-step" id="step1">
-                        <div class="stepper-icon">📦</div>
-                        <div class="stepper-line"></div>
-                        <div class="stepper-label">
-                            <strong>Order Confirmed</strong>
-                            <span>Warehouse received your order</span>
+                        <div class="stepper-icon-wrap">
+                            <div class="stepper-icon">📦</div>
+                            <div class="stepper-line"></div>
+                        </div>
+                        <div class="stepper-content">
+                            <p class="stepper-label">Order Confirmed</p>
+                            <p class="stepper-desc">Warehouse received your order</p>
                         </div>
                     </div>
 
                     <div class="stepper-step" id="step2">
-                        <div class="stepper-icon">🚚</div>
-                        <div class="stepper-line"></div>
-                        <div class="stepper-label">
-                            <strong>Out for Delivery</strong>
-                            <span>Your mystery box is on the way</span>
+                        <div class="stepper-icon-wrap">
+                            <div class="stepper-icon">🚚</div>
+                            <div class="stepper-line"></div>
+                        </div>
+                        <div class="stepper-content">
+                            <p class="stepper-label">Out for Delivery</p>
+                            <p class="stepper-desc">Your mystery box is on the way</p>
                         </div>
                     </div>
 
                     <div class="stepper-step" id="step3">
-                        <div class="stepper-icon">✅</div>
-                        <div class="stepper-line stepper-line--last"></div>
-                        <div class="stepper-label">
-                            <strong>Delivered</strong>
-                            <span>Package delivered successfully</span>
+                        <div class="stepper-icon-wrap">
+                            <div class="stepper-icon">✅</div>
+                            <div class="stepper-line stepper-line--last"></div>
+                        </div>
+                        <div class="stepper-content">
+                            <p class="stepper-label">Delivered</p>
+                            <p class="stepper-desc">Package delivered successfully</p>
                         </div>
                     </div>
 
@@ -77,33 +96,23 @@ require_once __DIR__ . '/../components/header.php';
 
             <!-- Delivery proof -->
             <div class="track-proof glass-card" id="trackProof" style="display:none">
-                <h3>📸 Delivery Proof</h3>
-                <img id="proofImg" src="" alt="Delivery proof photo" class="proof-img">
+                <h3 class="track-card-title">📸 Delivery Proof</h3>
+                <img id="proofImg" src="" alt="Delivery proof" class="proof-img">
                 <p id="proofNote" class="proof-note"></p>
             </div>
 
             <!-- WhatsApp contact -->
-            <div class="track-wa glass-card" id="trackWa" style="display:none">
-                <p>Need help with your order?</p>
+            <div class="track-wa glass-card" id="trackWa">
+                <div class="wa-info">
+                    <p class="wa-title">Need help with your order?</p>
+                    <p class="wa-sub">Our team is available on WhatsApp</p>
+                </div>
                 <a id="waLink" href="#" target="_blank" class="btn-wa">
                     💬 Contact via WhatsApp
                 </a>
             </div>
 
         </div>
-
-        <!-- Empty state -->
-        <div class="track-empty" id="trackEmpty" style="display:none">
-            <div class="track-empty-icon">🔍</div>
-            <p>No order found with that reference.<br>Please check and try again.</p>
-        </div>
-
-        <!-- Loading state -->
-        <div class="track-loading" id="trackLoading" style="display:none">
-            <div class="track-spinner"></div>
-            <p>Searching for your order...</p>
-        </div>
-
     </div>
 </section>
 

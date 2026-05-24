@@ -42,7 +42,7 @@ require_once __DIR__ . '/../components/header.php';
                         <span class="blc-meta-item">⚡ Rare chance of gaming gear</span>
                     </div>
                     <div class="blc-actions">
-                        <a href="<?= APP_URL ?>/checkout?box=shadow" class="btn-primary">
+                        <a href="<?= isLoggedIn() ? APP_URL . '/checkout?box=shadow' : APP_URL . '/login' ?>" class="btn-primary">
                             Open Shadow Box — <?= formatPrice(999) ?>
                         </a>
                     </div>
@@ -85,7 +85,7 @@ require_once __DIR__ . '/../components/header.php';
                         <span class="blc-meta-item">⚡ Chance of mechanical keyboard</span>
                     </div>
                     <div class="blc-actions">
-                        <a href="<?= APP_URL ?>/checkout?box=core" class="btn-primary">
+                        <a href="<?= isLoggedIn() ? APP_URL . '/checkout?box=shadow' : APP_URL . '/login' ?>" class="btn-primary">
                             Open Core Box — <?= formatPrice(2999) ?>
                         </a>
                     </div>
@@ -128,7 +128,7 @@ require_once __DIR__ . '/../components/header.php';
                         <span class="blc-meta-item">⚡ Chance of smartwatch</span>
                     </div>
                     <div class="blc-actions">
-                        <a href="<?= APP_URL ?>/checkout?box=pulse" class="btn-primary">
+                        <a href="<?= isLoggedIn() ? APP_URL . '/checkout?box=shadow' : APP_URL . '/login' ?>" class="btn-primary">
                             Open Pulse Box — <?= formatPrice(4999) ?>
                         </a>
                     </div>
@@ -171,7 +171,7 @@ require_once __DIR__ . '/../components/header.php';
                         <span class="blc-meta-item">⚡ Chance of Yamaha guitar</span>
                     </div>
                     <div class="blc-actions">
-                        <a href="<?= APP_URL ?>/checkout?box=elite" class="btn-primary">
+                        <a href="<?= isLoggedIn() ? APP_URL . '/checkout?box=elite' : APP_URL . '/login' ?>" class="btn-primary">
                             Open Elite Box — <?= formatPrice(9999) ?>
                         </a>
                     </div>
@@ -214,7 +214,7 @@ require_once __DIR__ . '/../components/header.php';
                         <span class="blc-meta-item">⚡ Chance of DJI Drone</span>
                     </div>
                     <div class="blc-actions">
-                        <a href="<?= APP_URL ?>/checkout?box=phantom" class="btn-primary">
+                        <a href="<?= isLoggedIn() ? APP_URL . '/checkout?box=phantom' : APP_URL . '/login' ?>" class="btn-primary">
                             Open Phantom Box — <?= formatPrice(24999) ?>
                         </a>
                     </div>
@@ -258,7 +258,7 @@ require_once __DIR__ . '/../components/header.php';
                         <span class="blc-meta-item">👑 Legendary iPhone trigger active</span>
                     </div>
                     <div class="blc-actions">
-                        <a href="<?= APP_URL ?>/checkout?box=god" class="btn-god">
+                        <a href="<?= isLoggedIn() ? APP_URL . '/checkout?box=god' : APP_URL . '/login' ?>" class="btn-god">
                             👑 Open GOD BOX — <?= formatPrice(99999) ?>
                         </a>
                     </div>

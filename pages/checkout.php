@@ -6,7 +6,7 @@ require_once __DIR__ . '/../config/session.php';
 require_once __DIR__ . '/../core/helpers.php';
 
 startSession();
-
+requireLogin();
 // Get box from query string
 $boxSlug  = sanitize($_GET['box'] ?? '');
 $boxes    = BOXES;

@@ -12,6 +12,9 @@ require_once __DIR__ . '/../../api/engine/mystery_engine.php';
 
 header('Content-Type: application/json');
 startSession();
+if (!isLoggedIn()) {
+    jsonResponse(['success' => false, 'message' => 'Please login to place an order.', 'redirect' => APP_URL . '/login']);
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(['success' => false, 'message' => 'Method not allowed'], 405);

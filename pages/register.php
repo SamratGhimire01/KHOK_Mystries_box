@@ -75,7 +75,14 @@ require_once __DIR__ . '/../components/header.php';
                     <label class="form-label" for="reg_password">Password</label>
                     <div class="input-wrap">
                         <input class="form-input" type="password" id="reg_password" name="password"
-                               placeholder="Min 8 characters" required minlength="8" autocomplete="new-password">
+       placeholder="Min 8 characters, mix letters & numbers"
+       required minlength="8" autocomplete="new-password">
+<div style="margin-top:.4rem">
+    <div style="height:3px;background:var(--border);border-radius:100px;overflow:hidden">
+        <div id="strengthBar" style="height:100%;width:0;transition:all .3s;border-radius:100px"></div>
+    </div>
+    <span id="strengthText" style="font-size:.7rem;margin-top:.2rem;display:block"></span>
+</div>
                         <button type="button" class="input-eye" id="togglePwd" aria-label="Show password">👁</button>
                     </div>
                 </div>

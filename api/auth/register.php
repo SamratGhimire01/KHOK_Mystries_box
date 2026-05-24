@@ -12,35 +12,42 @@ require_once __DIR__ . '/../../core/helpers.php';
 header('Content-Type: application/json');
 startSession();
 
-// Only accept POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     jsonResponse(['success' => false, 'message' => 'Method not allowed'], 405);
 }
 
-// ── Collect and sanitize inputs ──
-$fullName  = sanitize($_POST['full_name']        ?? '');
-$email     = strtolower(sanitize($_POST['email'] ?? ''));
-$phone     = sanitize($_POST['phone']            ?? '');
-$password  = $_POST['password']                  ?? '';
-$confirm   = $_POST['confirm_password']          ?? '';
-$city      = sanitize($_POST['city']             ?? '');
-$address   = sanitize($_POST['address']          ?? '');
+// ── Collect inputs ──
+$fullName = sanitize($_POST['full_name']        ?? '');
+$email    = strtolower(sanitize($_POST['email'] ?? ''));
+$phone    = sanitize($_POST['phone']            ?? '');
+$password = $_POST['password']                  ?? '';
+$confirm  = $_POST['confirm_password']          ?? '';
+$city     = sanitize($_POST['city']             ?? '');
+$address  = sanitize($_POST['address']          ?? '');
 
 // ── Validation ──
 $errors = [];
 
-if (strlen($fullName) < 2)
-    $errors[] = 'Full name must be at least 2 characters.';
+// Name: letters only, no numbers
+if (!preg_match('/^[a-zA-Z\s\'\-\.]{2,100}$/', $fullName))
+    $errors[] = 'Name must contain only letters — no numbers allowed.';
 
+// Email
 if (!filter_var($email, FILTER_VALIDATE_EMAIL))
     $errors[] = 'Please enter a valid email address.';
 
-if (!preg_match('/^[0-9]{10}$/', $phone))
-    $errors[] = 'Phone must be 10 digits (e.g. 9812345678).';
+// Phone: exactly 10 digits, starts with 97 or 98
+if (!preg_match('/^(97|98)\d{8}$/', $phone))
+    $errors[] = 'Phone must be 10 digits starting with 97 or 98.';
 
+// Password: min 8 chars, must have letter and number
 if (strlen($password) < 8)
     $errors[] = 'Password must be at least 8 characters.';
 
+if (!preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password))
+    $errors[] = 'Password must contain at least one letter and one number.';
+
+// Confirm
 if ($password !== $confirm)
     $errors[] = 'Passwords do not match.';
 
@@ -52,42 +59,25 @@ if (!empty($errors)) {
 $db   = getDB();
 $stmt = $db->prepare('SELECT id FROM users WHERE email = ?');
 $stmt->execute([$email]);
-
 if ($stmt->fetch()) {
     jsonResponse(['success' => false, 'message' => 'An account with this email already exists.']);
 }
 
-// ── Hash password with bcrypt ──
+// ── Hash password ──
 $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
 
 // ── Insert user ──
 try {
-    $insert = $db->prepare('
+    $db->prepare('
         INSERT INTO users (full_name, email, password_hash, phone, city, address, role)
         VALUES (?, ?, ?, ?, ?, ?, ?)
-    ');
-    $insert->execute([
-        $fullName,
-        $email,
-        $passwordHash,
-        $phone,
-        $city,
-        $address,
-        'customer'
-    ]);
+    ')->execute([$fullName, $email, $passwordHash, $phone, $city, $address, 'customer']);
 
-    $userId = $db->lastInsertId();
-
-    // ── Create session ──
-    $_SESSION['user_id']   = $userId;
-    $_SESSION['user_name'] = $fullName;
-    $_SESSION['user_email']= $email;
-    $_SESSION['role']      = 'customer';
-
+    // NO session created — user must login manually
     jsonResponse([
         'success'  => true,
-        'message'  => 'Account created successfully!',
-        'redirect' => APP_URL . '/'
+        'message'  => 'Account created successfully! Please login to continue.',
+        'redirect' => APP_URL . '/login'
     ]);
 
 } catch (PDOException $e) {

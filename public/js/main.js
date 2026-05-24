@@ -10,4 +10,13 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(() => flash.remove(), 500);
         }, 3500);
     }
+    // ─── Logout confirmation on all logout links ───
+    document.querySelectorAll('a[href*="/logout"]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = link.href;
+            }
+        });
+    });
 });
