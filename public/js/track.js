@@ -140,3 +140,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 // this is the page that will track the tracking system.
+// this is another day, another code. I am writing this code to track the order status of the customers. I am using fetch API to get the order details from the server and then displaying it on the page. I am also using some CSS classes to style the page. I hope this code will work fine and will help the customers to track their orders easily.
